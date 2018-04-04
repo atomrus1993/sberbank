@@ -51,6 +51,7 @@ class SberbankController
 {
     private $user;
     private $password;
+    private $passwordTest = "smoroza";
     private $test = false;
 
     /**
@@ -63,37 +64,37 @@ class SberbankController
      */
     public function register($orderId, $valuePay, $returnUrl)
     {
-		$query 	= Array(
-			'amount'      => $valuePay,
-			'orderNumber' => $orderId,
-			'returnUrl'   => $returnUrl
-		);
+        $query 	= Array(
+            'amount'      => $valuePay,
+            'orderNumber' => $orderId,
+            'returnUrl'   => $returnUrl
+        );
 
-		return $this->getRequest(
-			$this->getSberbankUrl('register'), 
-			$this->httpBuildQuery($query)
-		);
+        return $this->getRequest(
+            $this->getSberbankUrl('register'), 
+            $this->httpBuildQuery($query)
+        );
     }   
     /**
      * Регистрация заказа с предавторизацией
      * @link 	https://securepayments.sberbank.ru/wiki/doku.php/integration:api:rest:requests:registerpreauth
      * @param  	integer 	$orderId   	Номер заказа в магазине
      * @param  	integer 	$valuePay  	Сумма в копейках
-     * @param  	string 	$returnUrl 	Ссылка при успешной оплате
+     * @param  	string 	    $returnUrl 	Ссылка при успешной оплате
      * @return 	JSON 	order_id/formUrl
      */
     public function registerPreAuth($orderId, $valuePay, $returnUrl)
     {
-		$query 	= Array(
-			'amount'      => $valuePay,
-			'orderNumber' => $orderId,
-			'returnUrl'   => $returnUrl
-		);
+        $query 	= Array(
+            'amount'      => $valuePay,
+            'orderNumber' => $orderId,
+            'returnUrl'   => $returnUrl
+        );
 
-		return $this->getRequest(
-			$this->getSberbankUrl('registerPreAuth'), 
-			$this->httpBuildQuery($query)
-		);
+        return $this->getRequest(
+            $this->getSberbankUrl('registerPreAuth'), 
+            $this->httpBuildQuery($query)
+        );
     } 
     /**
      * Получение статуса заказа
@@ -103,14 +104,14 @@ class SberbankController
      */
     public function getOrderStatus($orderId)
     {
-		$query 	= Array(
-			'orderId' => $orderId
-		);
+        $query 	= Array(
+            'orderId' => $orderId
+        );
 
-		return $this->getRequest(
-			$this->getSberbankUrl('getOrderStatus'), 
-			$this->httpBuildQuery($query)
-		);
+        return $this->getRequest(
+            $this->getSberbankUrl('getOrderStatus'), 
+            $this->httpBuildQuery($query)
+        );
     }
     /**
      * Получение статуса заказа
@@ -121,22 +122,22 @@ class SberbankController
      */
     public function getOrderStatusExtended($orderId, $orderNumber)
     {
-    	$query 	= Array(
-			'orderId'      => $orderId,
-			'orderNumber' => $orderNumber
-		);
+        $query 	= Array(
+            'orderId'        => $orderId,
+            'orderNumber'    => $orderNumber
+        );
 
-		return $this->getRequest(
-			$this->getSberbankUrl('getOrderStatusExtended'), 
-			$this->httpBuildQuery($query)
-		);
+        return $this->getRequest(
+            $this->getSberbankUrl('getOrderStatusExtended'), 
+            $this->httpBuildQuery($query)
+        );
     }
 
     public function getSberbankUrl($query)
     {
-    	$url = $this->test ? "3dsec" : "securepayments";
+        $url = $this->test ? "3dsec" : "securepayments";
 
-     	return "https://" . $url . ".sberbank.ru/payment/rest/" . $query . ".do";
+        return "https://" . $url . ".sberbank.ru/payment/rest/" . $query . ".do";
     }
     /**
      * Запрос
@@ -146,7 +147,7 @@ class SberbankController
      */
     public function getRequest($url, $query)
     {
-    	return file_get_contents($url, false, $query);
+        return json_decode(file_get_contents($url, false, $query));
     }
     /**
      * Формирование данных для отправки
@@ -155,17 +156,17 @@ class SberbankController
      */
     public function httpBuildQuery($array)
     {
-		$array['password'] = $this->password;
-		$array['userName'] = $this->user;
+        $array['password'] = $this->password;
+        $array['userName'] = $this->user;
 
-    	$result =  Array(
-		    'http' => Array(
-		        'method'  => 'POST',
-		        'header'  => "Content-type: application/x-www-form-urlencoded",
-		        'content' => http_build_query($array),
-		        'timeout' => 60
-		    )
-    	);
+        $result =  Array(
+            'http' => Array(
+                'method'  => 'POST',
+                'header'  => "Content-type: application/x-www-form-urlencoded",
+                'content' => http_build_query($array),
+                'timeout' => 60
+            )
+        );
 
     	return stream_context_create($result);
     }
@@ -186,6 +187,14 @@ class SberbankController
     	$this->password = $password;
     }
     /**
+     * Задаем пароль пользователя тест
+     * @param string $password Пароль
+     */
+    public function setPasswordTest($password)
+    {
+        $this->passwordTest = $password;
+    }    
+    /**
      * Тестовый режим для отладки
      * @param  boolean $value 	true для теста
      * @return NULL         	Меняем с боевого режима на тестовый
@@ -193,7 +202,22 @@ class SberbankController
     public function testMode($value = false)
     {
     	if ($value === true){
-    		$this->test = true;
+            $this->test = true;
+            $this->password = $this->passwordTest;
     	}
+    }
+    /**
+     * Запись логов транзакций
+     * @param  string $string Данные
+     * @param  string $path   Название файла
+     * @return NULL           Создание файла
+     */
+    public function log($string, $path = 'otherSberbank')
+    {
+        $file    = fopen($_SERVER['DOCUMENT_ROOT'].'/logs/'. $path .'.log', 'a+');
+        fwrite($file, date("d-m-Y H:i:s") . PHP_EOL);
+        fwrite($file, json_encode($_REQUEST, JSON_UNESCAPED_UNICODE) . PHP_EOL . "===" . PHP_EOL);
+        fwrite($file, json_encode($string, JSON_UNESCAPED_UNICODE) . PHP_EOL . "\t\t\t\t=========" . PHP_EOL);
+        fclose($file);
     }
 }
