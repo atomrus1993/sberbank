@@ -51,7 +51,7 @@ class SberbankController
 {
     private $user;
     private $password;
-    private $passwordTest = "smoroza";
+    private $passwordTest = "testPassword";
     private $test = false;
 
     /**
